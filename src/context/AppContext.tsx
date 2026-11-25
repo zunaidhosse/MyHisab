@@ -247,7 +247,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             try {
               new Notification(`MyHisab: ${rem.title}`, {
                 body: rem.note || `${rem.date} ${rem.time}`,
-                icon: '/pwa-192x192.png',
+                icon: './pwa-192x192.png',
               });
             } catch {
               // ignore notification error in restricted iframe

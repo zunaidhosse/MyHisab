@@ -7,6 +7,7 @@ import {VitePWA} from 'vite-plugin-pwa';
 
 export default defineConfig(() => {
   return {
+    base: './',
     plugins: [
       react(),
       tailwindcss(),
@@ -20,7 +21,7 @@ export default defineConfig(() => {
           'pwa-maskable-512x512.png',
         ],
         manifest: {
-          id: '/',
+          id: './',
           name: 'MyHisab – Daily Income & Expense',
           short_name: 'MyHisab',
           description: 'MyHisab – Complete Daily Income, Expense, Savings, Loan, Due, Budget & Analytics Management App.',
@@ -28,23 +29,23 @@ export default defineConfig(() => {
           background_color: '#F0F3FF',
           display: 'standalone',
           orientation: 'portrait',
-          start_url: '/',
-          scope: '/',
+          start_url: './',
+          scope: './',
           icons: [
             {
-              src: '/pwa-192x192.png',
+              src: 'pwa-192x192.png',
               sizes: '192x192',
               type: 'image/png',
               purpose: 'any',
             },
             {
-              src: '/pwa-512x512.png',
+              src: 'pwa-512x512.png',
               sizes: '512x512',
               type: 'image/png',
               purpose: 'any',
             },
             {
-              src: '/pwa-maskable-512x512.png',
+              src: 'pwa-maskable-512x512.png',
               sizes: '512x512',
               type: 'image/png',
               purpose: 'maskable',
@@ -89,22 +90,30 @@ export default defineConfig(() => {
           type: 'module',
         },
       }),
-      // Copies src/assets into dist/ so root-relative URLs like
-      // "/src/assets/images/..." (e.g. generate_image output) still resolve
-      // in production builds. Do not remove.
+      // Copies src/assets into dist/ and mirrors build output to docs/ for GitHub Pages
       {
-        name: 'copy-unbundled-src-assets',
+        name: 'copy-unbundled-src-assets-and-gh-pages',
         apply: 'build',
-        closeBundle(error?: Error): void {
-          if (error) {
-            return;
-          }
-          const distDir = path.resolve(__dirname, 'dist');
-          const srcAssets = path.resolve(__dirname, 'src/assets');
-          const distAssets = path.resolve(distDir, 'src/assets');
-          if (fs.existsSync(distDir) && fs.existsSync(srcAssets)) {
-            fs.cpSync(srcAssets, distAssets, {recursive: true, force: true});
-          }
+        enforce: 'post',
+        closeBundle: {
+          order: 'post',
+          handler(error?: Error): void {
+            if (error) {
+              return;
+            }
+            const distDir = path.resolve(__dirname, 'dist');
+            const srcAssets = path.resolve(__dirname, 'src/assets');
+            const distAssets = path.resolve(distDir, 'src/assets');
+            if (fs.existsSync(distDir) && fs.existsSync(srcAssets)) {
+              fs.cpSync(srcAssets, distAssets, {recursive: true, force: true});
+            }
+            if (fs.existsSync(distDir)) {
+              fs.writeFileSync(path.join(distDir, '.nojekyll'), '');
+              const docsDir = path.resolve(__dirname, 'docs');
+              fs.rmSync(docsDir, {recursive: true, force: true});
+              fs.cpSync(distDir, docsDir, {recursive: true, force: true});
+            }
+          },
         },
       },
     ],
