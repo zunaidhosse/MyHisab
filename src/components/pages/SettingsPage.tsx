@@ -1,9 +1,11 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import QRCode from 'qrcode';
 import {
   Bell,
   Check,
   Clock,
   CloudUpload,
+  Copy,
   Crown,
   DatabaseBackup,
   Download,
@@ -17,6 +19,7 @@ import {
   KeyRound,
   Lock,
   Moon,
+  QrCode,
   Share2,
   ShieldCheck,
   Smartphone,
@@ -66,6 +69,23 @@ export const SettingsPage: React.FC = () => {
   const [rateComment, setRateComment] = useState('');
   const [editingProfileName, setEditingProfileName] = useState(false);
   const [profileNameInput, setProfileNameInput] = useState(settings.userName);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState<string>('');
+
+  const APP_SHARE_URL = 'https://zunaidhosse.github.io/MyHisab/';
+
+  useEffect(() => {
+    QRCode.toDataURL(APP_SHARE_URL, {
+      width: 260,
+      margin: 2,
+      color: {
+        dark: '#174D3C',
+        light: '#FFFFFF',
+      },
+    })
+      .then((url) => setQrDataUrl(url))
+      .catch(() => {});
+  }, []);
 
   const downloadBackupJson = async (label: string) => {
     const payload = await triggerManualBackup();
@@ -181,8 +201,11 @@ export const SettingsPage: React.FC = () => {
     showToast(lang === 'bn' ? 'পিন লক চালু হয়েছে!' : 'PIN Lock enabled!', 'success');
   };
 
-  const handleShareApp = async () => {
-    const shareUrl = window.location.origin;
+  const handleShareApp = () => {
+    setShowShareModal(true);
+  };
+
+  const handleNativeShare = async () => {
     if (navigator.share) {
       try {
         await navigator.share({
@@ -191,21 +214,25 @@ export const SettingsPage: React.FC = () => {
             lang === 'bn'
               ? 'MyHisab – দৈনিক আয়-ব্যয়, সঞ্চয়, লোন ও বাকি হিসাবের সেরা অ্যাপ!'
               : 'MyHisab – Daily Income, Expense, Savings, Loan & Due Manager!',
-          url: shareUrl,
+          url: APP_SHARE_URL,
         });
         return;
       } catch {
         // fallback to clipboard
       }
     }
+    await handleCopyShareUrl();
+  };
+
+  const handleCopyShareUrl = async () => {
     try {
-      await navigator.clipboard.writeText(shareUrl);
+      await navigator.clipboard.writeText(APP_SHARE_URL);
       showToast(
         lang === 'bn' ? 'অ্যাপের লিংক কপি হয়েছে!' : 'App link copied to clipboard!',
         'success'
       );
     } catch {
-      showToast(shareUrl, 'info');
+      showToast(APP_SHARE_URL, 'info');
     }
   };
 
@@ -761,6 +788,7 @@ export const SettingsPage: React.FC = () => {
                 {lang === 'bn' ? 'অ্যাপ শেয়ার করুন' : 'Share App'}
               </span>
             </div>
+            <QrCode className="w-4 h-4 text-[#E81760]" />
           </button>
 
           <button
@@ -1009,6 +1037,81 @@ export const SettingsPage: React.FC = () => {
                 {lang === 'bn' ? 'বন্ধ করুন' : 'Close'}
               </button>
             )}
+          </div>
+        </div>
+      )}
+      {/* Share App QR Code Modal */}
+      {showShareModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-3xl bg-white dark:bg-slate-900 border-2 border-[#174D3C] p-5 space-y-4 shadow-2xl text-center">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <QrCode className="w-5 h-5 text-[#E81760]" />
+                <h3 className="text-base font-extrabold">
+                  {lang === 'bn' ? 'MyHisab শেয়ার QR কোড' : 'Share MyHisab QR Code'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowShareModal(false)}
+                className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="rounded-2xl bg-[#F0F3FF] dark:bg-slate-800 p-4 border-2 border-[#174D3C]/20 flex flex-col items-center">
+              {qrDataUrl ? (
+                <img
+                  src={qrDataUrl}
+                  alt="MyHisab QR Code"
+                  className="w-52 h-52 rounded-xl bg-white p-2 border border-[#174D3C]/20 shadow-sm"
+                />
+              ) : (
+                <div className="w-52 h-52 rounded-xl bg-white flex items-center justify-center text-xs font-bold text-slate-400">
+                  QR...
+                </div>
+              )}
+              <p className="mt-3 text-xs font-bold text-[#174D3C] dark:text-[#80F5F3] break-all">
+                {APP_SHARE_URL}
+              </p>
+              <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                {lang === 'bn'
+                  ? 'স্ক্যান করে সরাসরি MyHisab অ্যাপ খুলুন'
+                  : 'Scan to open MyHisab app directly'}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={handleCopyShareUrl}
+                className="py-2.5 px-2 rounded-xl bg-[#D2E6FA] text-[#174D3C] text-xs font-extrabold flex items-center justify-center gap-1"
+              >
+                <Copy className="w-3.5 h-3.5" />
+                <span>{lang === 'bn' ? 'কপি' : 'Copy'}</span>
+              </button>
+
+              {qrDataUrl && (
+                <a
+                  href={qrDataUrl}
+                  download="myhisab-qr-code.png"
+                  className="py-2.5 px-2 rounded-xl bg-[#C9E9CE] text-[#174D3C] text-xs font-extrabold flex items-center justify-center gap-1"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>{lang === 'bn' ? 'সেভ' : 'Save QR'}</span>
+                </a>
+              )}
+
+              <button
+                type="button"
+                onClick={handleNativeShare}
+                className="py-2.5 px-2 rounded-xl bg-[#E81760] text-white text-xs font-extrabold flex items-center justify-center gap-1"
+              >
+                <Share2 className="w-3.5 h-3.5" />
+                <span>{lang === 'bn' ? 'শেয়ার' : 'Share'}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
